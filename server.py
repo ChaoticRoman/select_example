@@ -24,11 +24,11 @@ while inputs:
                 if s not in outputs:
                     outputs.append(s)
             else:
+                print(f"closing connection to {s.getpeername()}")
                 if s in outputs:
                     outputs.remove(s)
                 inputs.remove(s)
                 s.close()
-                print(f"closing connection to {s.getpeername()}")
 
     for s in writable:
         s.send(b"Hello, client!")

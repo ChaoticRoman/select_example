@@ -134,3 +134,42 @@ data transfer, so a real-world client would likely have more robust error
 handling and possibly more complex interaction logic. This is a simple example
 to illustrate how a client might connect and interact with the server from the
 previous example.
+
+**Roman:** I have got this from server after running a server and then client:
+
+```
+New connection from ('127.0.0.1', 41890)
+received 'b'Hello, server!'' from ('127.0.0.1', 41890)
+Traceback (most recent call last):
+  File "/home/roman/projects/select_example/server.py", line 31, in <module>
+    print(f"closing connection to {s.getpeername()}")
+OSError: [Errno 9] Bad file descriptor
+```
+
+**GPT-4:** The issue is likely due to the order of operations in your `readable` loop.
+
+In your code, after checking if there's data received, you're removing the socket from `outputs` and `inputs` and closing it, regardless of whether you've processed the data. However, you're still attempting to reference `s` (which refers to a now closed socket) after you've closed it, leading to an OSError.
+
+Here's the corrected segment of code:
+
+```python
+    for s in readable:
+        if s is server:
+            connection, client_address = s.accept()
+            inputs.append(connection)
+            print(f"New connection from {client_address}")
+        else:
+            data = s.recv(1024)
+            if data:
+                print(f"received '{data}' from {s.getpeername()}")
+                if s not in outputs:
+                    outputs.append(s)
+            else:
+                print(f"closing connection to {s.getpeername()}")
+                if s in outputs:
+                    outputs.remove(s)
+                inputs.remove(s)
+                s.close()
+```
+
+Here, the server socket is checked if it's readable. If it is, it accepts the connection and adds it to the list of inputs. If the socket is not the server (i.e., a client), it attempts to read data from it. If data is received, it's printed and the client is added to the list of outputs if it's not already there. If no data is received (which indicates the client has closed the connection), the client is removed from the lists and its connection is closed. The message about closing the connection is printed before actually closing the socket, preventing an attempt to use a closed socket.
